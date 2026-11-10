@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="nl"><head>
+   <!-- Required meta tags -->
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+   <!-- Bootstrap CSS -->
+   <link rel="stylesheet" type="text/css" href="/shared/_pages/../_assets/thirdpartylib/bootstrap-4.6.2/css/bootstrap.min.css">
+   <!-- Font Awesome CSS -->
+   <link rel="stylesheet" type="text/css" href="/shared/_pages/../_assets/thirdpartylib/fontawesome-free-6.1.1-web/css/all.min.css">
+   <!-- Lightbox2-2.11.3 CSS -->
+   <link rel="stylesheet" type="text/css" href="/shared/_pages/../_assets/thirdpartylib/lightbox2-2.11.3/css/lightbox.css">
+   <!-- Template CSS -->
+   <link rel="stylesheet" type="text/css" href="/shared/_pages/../_assets/css/styles.min.css">
+   <link rel="stylesheet" type="text/css" href="/shared/_pages/../_assets/css/custom.css">
+   <!-- MathJax for math formulas -->
+   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async=""></script>
+   <!-- DO NOT EDIT CODE ABOVE THIS LINE -->
+   <title>Kennisbasis: Deep Learning — Week 3</title>
+
+   <style>
+      figure {
+         padding: 15px;
+      }
+
+      img:hover {
+         transform: none !important;
+         transition: none !important;
+      }
+   </style>
+</head><body><div class="body--theme1">
+<div class="container-fluid">
+<div class="row">
+<div class="col-sm-10 offset-sm-1" role="main"><!--start back to top button--> <button type="button" aria-label="scroll-naar-boven-knop" class="btn btn-floating btn-sm hvr-bob" id="btn-back-to-top" tabindex="0"> <i class="fa-solid fa-chevron-up"></i> </button> <!--end back to top button--><!-- ===== BEGIN CONTENT AREA ===== -->
+<h1 id="start">Kennisbasis DP5 Thema-opdracht 3</h1>
+<!-- Intro callout -->
+<div class="card card-graphic bg-white mdb-shadow-4-strong my-5">
+<div class="card-icon-top z-depth-1"><i class="fa-solid fa-info fa-2x hvr-pulse" style="transform: translateY(-2px);"></i></div>
+<div class="card-body">
+<div class="card-text pt-1">
+<p style="margin-bottom: 0px;">In week 1 en 2 van het Deep Learning thema heb je geleerd hoe taalmodellen <em>vanbinnen</em> werken: van word embeddings en RNN's tot transformers en het fine-tunen van large language models. In deze week zet je die kennis om in de praktijk. Je leert hoe je een taalmodel koppelt aan je eigen kennisbronnen met retrieval-augmented generation (RAG), hoe modellen acties kunnen uitvoeren via tools en agents, en wat moderne redeneer- en multimodale modellen toevoegen. Precies de bouwstenen die je nodig hebt voor een toepassing als de OER-bot.</p>
+</div>
+</div>
+</div>
+<!-- Inhoudsopgave -->
+<h2 id="inhoudsopgave">Inhoud</h2>
+<ul class="list-brand">
+<li style="padding-bottom: 0;"><a href="#embeddings-zoeken">Embeddings voor betekenis</a>
+<ul class="list-brand">
+<li style="padding-bottom: 0;"><a href="#semantisch-zoeken">Semantisch zoeken</a></li>
+<li style="padding-bottom: 0;"><a href="#vector-databases">Vector databases</a></li>
+</ul>
+</li>
+<li style="padding-bottom: 0;"><a href="#rag">Retrieval-Augmented Generation (RAG)</a>
+<ul class="list-brand">
+<li style="padding-bottom: 0;"><a href="#rag-pipeline">De RAG-pipeline</a></li>
+<li style="padding-bottom: 0;"><a href="#rag-vs-finetuning">RAG versus fine-tuning</a></li>
+</ul>
+</li>
+<li style="padding-bottom: 0;"><a href="#agents">LLM-agents en tool use</a></li>
+<li style="padding-bottom: 0;"><a href="#redeneermodellen">Redeneermodellen en test-time compute</a></li>
+<li style="padding-bottom: 0;"><a href="#multimodaal">Multimodale modellen</a></li>
+<li style="padding-bottom: 0;"><a href="#keuzewijzer">Keuzewijzer</a></li>
+<li style="padding-bottom: 0;"><a href="#bronnen">Bronnen</a></li>
+</ul>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 1: EMBEDDINGS VOOR BETEKENIS                      --><!-- ======================================================== -->
+<h2 id="embeddings-zoeken">Embeddings voor betekenis</h2>
+<p>In week 1 gebruikte je word embeddings om losse woorden als vector weer te geven: woorden met een vergelijkbare betekenis liggen dicht bij elkaar in een veeldimensionale ruimte. Datzelfde idee kun je opschalen naar hele zinnen en documenten. Een sentence embedding is een vector die de betekenis van een complete tekst samenvat. Twee teksten die ongeveer hetzelfde betekenen, krijgen dan vectoren die dicht bij elkaar liggen ook al gebruiken ze totaal andere woorden.</p>
+<p>Dit is een belangrijk verschil met klassiek zoeken op trefwoorden. Zoek je op het woord "tentamen", dan mis je een document dat het over "toetsing" of "examen" heeft. Met embeddings vergelijk je <em>betekenis</em> in plaats van letterlijke woorden. Daarom noemen we dit semantisch zoeken.</p>
+<h3 id="semantisch-zoeken">Semantisch zoeken</h3>
+<p>Hoe meet je nu hoe "dichtbij" twee vectoren liggen? Daarvoor gebruik je meestal de cosine-similarity: de cosinus van de hoek tussen twee vectoren. De waarde ligt tussen -1 en 1; hoe dichter bij 1, hoe meer de teksten qua betekenis op elkaar lijken.</p>
+<p style="text-align: center;">\( \text{cosine-similarity}(A, B) = \dfrac{A \cdot B}{\lVert A \rVert \, \lVert B \rVert} \)</p>
+<p>In Python hoef je dit gelukkig niet zelf te implementeren. De library <code>sentence-transformers</code> biedt voorgetrainde modellen die je tekst direct omzetten naar een embedding, plus een handige functie voor de cosine-similarity. In het onderstaande voorbeeld vergelijk je een vraag van een student met een paar zinnen uit de OER.</p>
+<figure class="dark-mode">
+<div class="highlight" style="background: #f8f8f8;">
+<pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold;">from</span><span style="color: #bbb;"> </span><span style="color: #00f; font-weight: bold;">sentence_transformers</span><span style="color: #bbb;"> </span><span style="color: #008000; font-weight: bold;">import</span> SentenceTransformer, util
+
+<span style="color: #3d7b7b; font-style: italic;"># 1. Laad een voorgetraind embedding-model</span>
+model <span style="color: #666;">=</span> SentenceTransformer(<span style="color: #ba2121;">'all-MiniLM-L6-v2'</span>)
+
+<span style="color: #3d7b7b; font-style: italic;"># 2. Documenten uit de OER en een vraag van een student</span>
+documenten <span style="color: #666;">=</span> [
+    <span style="color: #ba2121;">"Je schrijft je uit voor een vak via Studielink."</span>,
+    <span style="color: #ba2121;">"Het herkansingsbeleid en het aantal toetskansen staan in de OER."</span>,
+    <span style="color: #ba2121;">"De bibliotheek is open van 8 tot 22 uur."</span>,
+]
+vraag <span style="color: #666;">=</span> <span style="color: #ba2121;">"Hoeveel kansen heb ik om een tentamen te halen?"</span>
+
+<span style="color: #3d7b7b; font-style: italic;"># 3. Zet zowel de documenten als de vraag om naar vectoren</span>
+doc_vectoren <span style="color: #666;">=</span> model<span style="color: #666;">.</span>encode(documenten)
+vraag_vector <span style="color: #666;">=</span> model<span style="color: #666;">.</span>encode(vraag)
+
+<span style="color: #3d7b7b; font-style: italic;"># 4. Bereken de cosine-similarity tussen de vraag en elk document</span>
+scores <span style="color: #666;">=</span> util<span style="color: #666;">.</span>cos_sim(vraag_vector, doc_vectoren)
+<span style="color: #008000;">print</span>(scores)</pre>
+</div>
+<pre style="background: #f0f0f0; border-left: 3px solid #ccc; padding: 0.6em 1em; font-size: 0.88em; margin: 0 0 1em 0; overflow-x: auto;">tensor([[0.18, 0.61, 0.07]])</pre>
+<figcaption><strong>Code 1.</strong> Semantisch zoeken met <code>sentence-transformers</code>. De vraag over toetskansen lijkt qua betekenis het meest op de zin over het herkansingsbeleid (score 0,61), ook al komt het woord "tentamen" daar niet letterlijk in voor.</figcaption>
+</figure>
+<p>De hoogste score hoort bij de zin over het herkansingsbeleid. Zo vind je op betekenis de meest relevante tekst, in plaats van op exacte woorden.</p>
+<figure class="dark-mode">
+<div style="overflow: hidden;"><img src="assets/thema03_week3_semantic_search.png" alt="Schematische weergave van semantisch zoeken: documenten en een vraag worden door een embedding-model omgezet naar vectoren in dezelfde ruimte; de documenten die het dichtst bij de vraag-vector liggen zijn het meest relevant." width="650"></div>
+<figcaption><strong>Figuur 2.</strong> Semantisch zoeken. Zowel de documenten als de vraag worden naar dezelfde vectorruimte vertaald. De documenten die het dichtst bij de vraag liggen, zijn qua betekenis het meest relevant.</figcaption>
+</figure>
+<h3 id="vector-databases">Vector databases</h3>
+<p>In het voorbeeld vergelijk je de vraag met slechts drie documenten. In de praktijk werk je al snel met duizenden of miljoenen tekstfragmenten. Voor elke vraag alle vectoren één voor één doorrekenen wordt dan te traag. Daarvoor gebruik je een<strong> </strong>vector database: een database die speciaal is gemaakt om vectoren op te slaan en razendsnel de dichtstbijzijnde te vinden. Bekende voorbeelden zijn FAISS, Chroma en Pinecone.</p>
+<p>Vector databases gebruiken hiervoor approximate nearest neighbour (ANN)-technieken. In plaats van de exacte afstand tot élke vector te berekenen, zoeken ze slim naar de waarschijnlijk dichtstbijzijnde buren. Je levert een heel klein beetje nauwkeurigheid in, maar krijgt er een enorme snelheidswinst voor terug.</p>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 2: RETRIEVAL-AUGMENTED GENERATION                 --><!-- ======================================================== -->
+<h2 id="rag">Retrieval-Augmented Generation (RAG)</h2>
+<p>Een large language model weet veel, maar het weet alleen wat het tijdens de training heeft gezien. Het kent jouw OER niet, het weet niets van interne bedrijfsdocumenten, en zijn kennis loopt achter op de actualiteit.</p>
+<p>Retrieval-augmented generation (RAG) lost dit op door het beste van twee werelden te combineren: je laat het taalmodel niet uit zijn geheugen putten, maar je geeft het de juiste informatie mee op het moment van de vraag. Je zoekt eerst (met semantisch zoeken) de meest relevante tekst op uit je eigen bronnen, en plakt die als context bij de vraag. Het model formuleert dan een antwoord dat <em>gegrond</em> is in die opgehaalde tekst.</p>
+<p>De voordelen zijn groot: je antwoorden zijn actueel en gebaseerd op jouw eigen bronnen, je vermindert het risico op hallucinaties, en je hoeft het model niet opnieuw te trainen als de informatie verandert.</p>
+<h3 id="rag-pipeline">De RAG-pipeline</h3>
+<p>Een RAG-toepassing bestaat uit een aantal vaste stappen. De eerste stappen doe je eenmalig vooraf (het klaarzetten van je kennisbank); de laatste stappen gebeuren bij elke vraag.</p>
+<figure class="dark-mode">
+<div style="overflow: hidden;"><img src="assets/thema03_week3_rag_pipeline.png" alt="Diagram van de RAG-pipeline: documenten worden in stukken geknipt en als vectoren opgeslagen in een vector database; bij een vraag worden de meest relevante stukken opgehaald, bij de prompt gevoegd en door het taalmodel tot een antwoord verwerkt." width="720"></div>
+<figcaption><strong>Figuur 3.</strong> De RAG-pipeline. Vooraf knip je je documenten in stukken en sla je ze als vectoren op. Bij elke vraag haal je de meest relevante stukken op, voeg je ze bij de prompt en laat je het taalmodel een gegrond antwoord genereren.</figcaption>
+</figure>
+<ol class="list-brand">
+<li style="padding-bottom: 0;">Chunking:&nbsp;knip je documenten in behapbare stukken (bijvoorbeeld per alinea), zodat je later gericht kunt ophalen.</li>
+<li style="padding-bottom: 0;">Embedden:&nbsp;zet elk stuk om naar een vector met een embedding-model.</li>
+<li style="padding-bottom: 0;">Opslaan:&nbsp;bewaar de vectoren in een vector database.</li>
+<li style="padding-bottom: 0;">Retrieven:&nbsp;zet de vraag om naar een vector en haal de meest gelijkende stukken op.</li>
+<li style="padding-bottom: 0;">Augmenteren:&nbsp;voeg de opgehaalde stukken als context toe aan de prompt.</li>
+<li style="padding-bottom: 0;">Genereren:&nbsp;laat het taalmodel op basis van die context een antwoord formuleren.</li>
+</ol>
+<p>De laatste drie stappen (retrieven, augmenteren en genereren) vormen de kern. In de onderstaande code zie je hoe je voortbouwt op het voorbeeld van Code 1: je haalt de beste documenten op en bouwt daarmee een prompt voor het taalmodel.</p>
+<figure class="dark-mode">
+<div class="highlight" style="background: #f8f8f8;">
+<pre style="line-height: 125%;"><span></span><span style="color: #3d7b7b; font-style: italic;"># 1. Retrieval: haal de meest relevante documenten op</span>
+top_k <span style="color: #666;">=</span> <span style="color: #666;">2</span>
+beste <span style="color: #666;">=</span> scores[<span style="color: #666;">0</span>]<span style="color: #666;">.</span>topk(top_k)<span style="color: #666;">.</span>indices
+context <span style="color: #666;">=</span> <span style="color: #ba2121;">"</span><span style="color: #aa5d1f; font-weight: bold;">\n</span><span style="color: #ba2121;">"</span><span style="color: #666;">.</span>join(documenten[i] <span style="color: #008000; font-weight: bold;">for</span> i <span style="color: #a2f; font-weight: bold;">in</span> beste)
+
+<span style="color: #3d7b7b; font-style: italic;"># 2. Augmentation: bouw een prompt met de opgehaalde context</span>
+prompt <span style="color: #666;">=</span> <span style="color: #ba2121;">f"""Beantwoord de vraag uitsluitend op basis van de context.</span>
+<span style="color: #ba2121;">Weet je het antwoord niet? Zeg dat dan eerlijk.</span>
+
+<span style="color: #ba2121;">Context:</span>
+<span style="color: #a45a77; font-weight: bold;">{</span>context<span style="color: #a45a77; font-weight: bold;">}</span>
+
+<span style="color: #ba2121;">Vraag: </span><span style="color: #a45a77; font-weight: bold;">{</span>vraag<span style="color: #a45a77; font-weight: bold;">}</span>
+<span style="color: #ba2121;">Antwoord:"""</span>
+
+<span style="color: #3d7b7b; font-style: italic;"># 3. Generation: laat het taalmodel antwoorden</span>
+antwoord <span style="color: #666;">=</span> llm<span style="color: #666;">.</span>generate(prompt)
+<span style="color: #008000;">print</span>(antwoord)</pre>
+</div>
+<figcaption><strong>Code 4.</strong> Een minimale RAG-stap. Je haalt de twee meest relevante documenten op, voegt ze als context toe aan de prompt, en laat het taalmodel daarop een antwoord baseren. De instructie om eerlijk te zijn bij twijfel helpt hallucinaties te beperken.</figcaption>
+</figure>
+<p>Let op een belangrijk detail in de prompt: je vraagt het model expliciet om <em>alleen</em> op basis van de context te antwoorden en eerlijk te zijn als het iets niet weet. Zo voorkom je dat het model toch zelf iets gaat invullen. De kwaliteit van een RAG-toepassing staat of valt met de kwaliteit van je retrieval: haal je de verkeerde stukken op, dan krijgt het model verkeerde context mee.</p>
+<h3 id="rag-vs-finetuning">RAG versus fine-tuning</h3>
+<p>In week 2 heb je gezien hoe je een model kunt fine-tunen (doortrainen) op je eigen data. RAG en fine-tuning lossen allebei het probleem op dat een model jouw specifieke situatie niet kent, maar ze doen dat op een fundamenteel andere manier. Het is daarom belangrijk om te weten wanneer je wat kiest.</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th scope="col">Aspect</th>
+<th scope="col">RAG</th>
+<th scope="col">Fine-tuning (doortrainen)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wat het doet</td>
+<td>Voegt kennis toe op het moment van de vraag</td>
+<td>Past het model zelf aan</td>
+</tr>
+<tr>
+<td>Kennis bijwerken</td>
+<td>Vervang de documenten</td>
+<td>Vereist opnieuw trainen</td>
+</tr>
+<tr>
+<td>Sterk in</td>
+<td>Actuele, feitelijke kennis uit eigen bronnen</td>
+<td>Vaste stijl, toon, format en taakgedrag</td>
+</tr>
+<tr>
+<td>Hallucinaties</td>
+<td>Minder, want antwoord is gegrond in opgehaalde tekst</td>
+<td>Niet automatisch minder</td>
+</tr>
+<tr>
+<td>Kosten/onderhoud</td>
+<td>Vectoropslag en retrieval beheren</td>
+<td>Rekentijd voor (her)training</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tabel 5.</strong> RAG en fine-tuning vergeleken. RAG is sterk in actuele, feitelijke kennis; fine-tuning is sterk in vaste stijl en taakgedrag.</p>
+<p>In de praktijk hoef je niet te kiezen: je kunt ze juist combineren. Voor een toepassing als de OER-bot betekent dat bijvoorbeeld: gebruik RAG om de actuele, feitelijke inhoud van de OER op te halen, en gebruik fine-tuning om het model de juiste toon en het gewenste antwoordformat aan te leren. Zo geeft de bot antwoorden die zowel kloppen als prettig leesbaar zijn.</p>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 3: LLM-AGENTS EN TOOL USE                         --><!-- ======================================================== -->
+<h2 id="agents">LLM-agents en tool use</h2>
+<p>Tot nu toe gebruikte je het taalmodel om tekst te genereren. Maar moderne toepassingen gaan een stap verder: ze laten het model ook acties uitvoeren. Het model kan dan zelf besluiten om een berekening te doen, een database te raadplegen, of bijvoorbeeld gericht in de OER te zoeken. Dit heet tool use of function calling.</p>
+<p>Het idee is simpel: je beschrijft welke "tools" (functies) het model mag gebruiken, met hun naam, doel en parameters. Als het model besluit dat een tool nodig is, geeft het terug welke functie het met welke argumenten wil aanroepen. Jouw code voert die functie uit en geeft het resultaat terug aan het model.</p>
+<figure class="dark-mode">
+<div class="highlight" style="background: #f8f8f8;">
+<pre style="line-height: 125%;"><span></span><span style="color: #3d7b7b; font-style: italic;"># Je beschrijft de tools die het model mag gebruiken</span>
+tools <span style="color: #666;">=</span> [
+    {
+        <span style="color: #ba2121;">"naam"</span>: <span style="color: #ba2121;">"zoek_in_oer"</span>, <span style="color: #3d7b7b; font-style: italic;"># naam van de tool/functie die je wilt aanroepen</span>&nbsp;
+&nbsp; &nbsp; &nbsp; &nbsp; <span style="color: #ba2121;">"beschrijving"</span>: <span style="color: #ba2121;">"Zoekt relevante passages in de OER"</span>,
+        <span style="color: #ba2121;">"parameters"</span>: {<span style="color: #ba2121;">"vraag"</span>: <span style="color: #ba2121;">"string"</span>},
+    }
+]
+
+<span style="color: #3d7b7b; font-style: italic;"># De agent-lus: redeneer -&gt; kies een tool -&gt; voer uit -&gt; lees resultaat -&gt; herhaal</span>
+antwoord <span style="color: #666;">=</span> agent<span style="color: #666;">.</span>run(
+    <span style="color: #ba2121;">"Mag ik een derde herkansing aanvragen?"</span>,
+    tools<span style="color: #666;">=</span>tools,
+)
+<span style="color: #008000;">print</span>(antwoord)</pre>
+</div>
+<figcaption><strong>Code 6.</strong> Een schematisch voorbeeld van tool use. Het model krijgt een beschrijving van de beschikbare tools en kan zelf besluiten de OER te doorzoeken voordat het antwoordt.&nbsp;</figcaption>
+</figure>
+<p>Een agent is een taalmodel dat dit in een lus doet: het redeneert over wat nodig is, kiest een tool, voert die uit, leest het resultaat, en herhaalt dit totdat het de taak kan afronden. Zo kan een agent meerstaps-taken zelfstandig uitvoeren.</p>
+<figure class="dark-mode">
+<div style="overflow: hidden;"><img src="assets/thema03_week3_agent_loop.png" alt="Diagram van de agent-lus: het taalmodel redeneert, kiest een tool, voert die uit en leest het resultaat; deze lus herhaalt totdat het model een eindantwoord kan geven." width="600"></div>
+<figcaption><strong>Figuur 7.</strong> De agent-lus. Het model wisselt af tussen redeneren en het aanroepen van tools, totdat het genoeg informatie heeft om te antwoorden.</figcaption>
+</figure>
+<p>Omdat elke aanbieder tools op zijn eigen manier beschreef, is er behoefte aan een standaard. Het Model Context Protocol (MCP), ontwikkeld door Anthropic en sinds eind 2025 ondergebracht bij de Linux Foundation, is zo'n open standaard. Het beschrijft op een uniforme manier hoe een model met externe tools en databronnen praat, zodat je tools maar één keer hoeft te bouwen en ze daarna met elk MCP-compatibel model kunt gebruiken.</p>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 4: REDENEERMODELLEN EN TEST-TIME COMPUTE          --><!-- ======================================================== -->
+<h2 id="redeneermodellen">Redeneermodellen en test-time compute</h2>
+<p>Een gewoon taalmodel geeft direct antwoord: het voorspelt woord voor woord en "flapt eruit" wat het denkt. Voor eenvoudige vragen werkt dat prima, maar bij ingewikkelde problemen (denk aan wiskunde, logica of een meerstaps-planning) gaat het dan vaak mis. Een mens zou bij zo'n probleem eerst even nadenken en het stap voor stap uitwerken. Precies dat idee zit achter redeneermodellen (reasoning models).</p>
+<p>Een redeneermodel genereert eerst een interne chain-of-thought: een uitgeschreven gedachtegang waarin het de stappen naar het antwoord uitwerkt, voordat het het uiteindelijke antwoord geeft. Door het model letterlijk "meer te laten denken", worden de antwoorden op moeilijke problemen aanzienlijk beter.</p>
+<p>Dit illustreert een belangrijke verschuiving in het vakgebied. Lange tijd dachten we dat modellen vooral beter werden door ze <em>groter</em> te maken en op <em>meer data</em> te trainen. Bij redeneermodellen komt de winst van een andere kant: in plaats van direct een antwoord te geven, besteedt het model meer rekentijd aan het doorlopen van redeneerstappen. Dit heet test-time compute (of inference-time scaling). Bekende voorbeelden zijn de o-serie van OpenAI (o1, o3) en het open model DeepSeek-R1, dat liet zien dat je dit redeneergedrag via reinforcement learning kunt aanleren.</p>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 5: MULTIMODALE MODELLEN                           --><!-- ======================================================== -->
+<h2 id="multimodaal">Multimodale modellen</h2>
+<p>De modellen in dit thema werkten tot nu toe met tekst. Maar de nieuwste generatie taalmodellen is multimodaal: ze verwerken naast tekst ook beeld, en soms audio en video. Zo'n model heet ook wel een vision-language model (VLM). Je kunt er bijvoorbeeld een foto aan geven met de vraag "wat staat hierop?", of een grafiek laten interpreteren. Bekende voorbeelden zijn GPT-4o, Gemini en Claude.</p>
+<p>Dit sluit mooi aan op wat je eerder hebt geleerd. In thema 2 zag je hoe neurale netwerken beelden kunnen verwerken, en in dit thema hoe transformers taal verwerken. Een multimodaal model combineert deze mogelijkheden. Wanneer je een afbeelding invoert, wordt die eerst verwerkt door een gespecialiseerd visueel onderdeel van het model. De resulterende representaties worden vervolgens samen met tekst verwerkt door de transformer, zodat het model verbanden kan leggen tussen wat het ziet en wat het leest. Daardoor kan het bijvoorbeeld afbeeldingen beschrijven, grafieken interpreteren of vragen beantwoorden over de inhoud van een document met tekst en afbeeldingen.&nbsp;</p>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 6: KEUZEWIJZER                                    --><!-- ======================================================== -->
+<h2 id="keuzewijzer">Keuzewijzer</h2>
+<p>Je hebt nu een flink aantal technieken gezien om een taalmodel in de praktijk in te zetten. Maar wanneer kies je wat? De onderstaande tabel helpt je op weg. In een echte toepassing combineer je deze aanpakken vaak.</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th scope="col">Situatie</th>
+<th scope="col">Aanpak</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Je wilt actuele of organisatiespecifieke feiten gebruiken</td>
+<td>RAG</td>
+</tr>
+<tr>
+<td>Je wilt een vaste stijl, toon of vast outputformat</td>
+<td>Fine-tuning (doortrainen)</td>
+</tr>
+<tr>
+<td>Het model moet acties uitvoeren of externe systemen raadplegen</td>
+<td>Agent met tool use</td>
+</tr>
+<tr>
+<td>De taak vereist stap-voor-stap redeneren (wiskunde, logica, planning)</td>
+<td>Redeneermodel</td>
+</tr>
+<tr>
+<td>Je verwerkt naast tekst ook beeld of audio</td>
+<td>Multimodaal model (VLM)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tabel 8.</strong> Keuzewijzer voor het toepassen van taalmodellen. In de praktijk worden deze aanpakken vaak gecombineerd (bijvoorbeeld RAG én fine-tuning) in één toepassing.</p>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ======================================================== --><!-- SECTIE 7: BRONNEN                                        --><!-- ======================================================== -->
+<h2 id="bronnen">Bronnen</h2>
+<p>Wil je je verder verdiepen? Bekijk dan de volgende bronnen:</p>
+<ul class="list-brand">
+<li style="padding-bottom: 0;">Documentatie van <a href="https://www.sbert.net/" target="_blank" rel="noopener">Sentence Transformers</a>: embeddings en semantisch zoeken in Python.</li>
+<li style="padding-bottom: 0;">Deeplearning.ai cursus <em>Generative AI with LLMs:</em>&nbsp; RAG, fine-tuning en alignment.</li>
+<li style="padding-bottom: 0;">De <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">officiële documentatie van het Model Context Protocol (MCP)</a>:&nbsp;(tool use en agents.</li>
+<li style="padding-bottom: 0;">Sebastian Raschka, <a href="https://magazine.sebastianraschka.com/p/state-of-llms-2025" target="_blank" rel="noopener">The State of LLMs 2025</a>: overzicht van reasoning, MoE en moderne alignment.</li>
+</ul>
+<div class="astrodivider">
+<div class="astrodividermask"></div>
+<span><a href="#start"><i class="fas fa-home"></i></a></span></div>
+<!-- ===== END CONTENT AREA ===== --></div>
+<div class="col-sm-10 offset-sm-1"><footer></footer></div>
+</div>
+</div>
+</div>
+<!-- Scripts -->
+<p>
+<script src="/shared/_pages/../_assets/thirdpartylib/jquery/jquery-3.5.1.min.js"></script>
+<script src="/shared/_pages/../_assets/thirdpartylib/popper-js/popper-1.16.1.min.js"></script>
+<script src="/shared/_pages/../_assets/thirdpartylib/bootstrap-4.6.2/js/bootstrap.min.js"></script>
+<script src="/shared/_pages/../_assets/thirdpartylib/lightbox2-2.11.3/js/lightbox.js"></script>
+<script src="/shared/_pages/../_assets/thirdpartylib/balance-text/balancetext.min.js"></script>
+<script src="/shared/_pages/../_assets/js/scripts.min.js"></script>
+<script src="/shared/_pages/../_assets/js/custom.js"></script>
+</p></body></html>
