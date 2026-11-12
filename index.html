@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OER-assistent</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="chat-shell">
+      <header class="header">
+        <p class="eyebrow">RAG · Bachelor ICT</p>
+        <h1>OER-assistent</h1>
+        <p>Stel een vraag over het onderwijs- en examenreglement.</p>
+      </header>
+
+      <section id="messages" class="messages" aria-live="polite">
+        <div class="welcome">
+          <strong>Waar kan ik mee helpen?</strong>
+          <span>Bijvoorbeeld: “Hoeveel EC's heb ik in het eerste jaar nodig?”</span>
+        </div>
+      </section>
+
+      <p id="error" class="error" hidden></p>
+
+      <form id="question-form" class="question-form">
+        <label for="question">Jouw vraag</label>
+        <div class="input-row">
+          <input id="question" type="text" placeholder="Typ hier je vraag..." autocomplete="off" required>
+          <button type="submit">Verstuur</button>
+        </div>
+      </form>
+      <footer>Antwoorden zijn gebaseerd op het OER. Controleer altijd de bronpagina.</footer>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
