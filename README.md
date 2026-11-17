@@ -50,9 +50,6 @@ Laat `ollama serve` actief tijdens het gebruik van de chatbot.
    en embeddings geladen.
 4. Voer daarna de deploymentcel uit die begint met:
 
-   ```python
-   #hier verder deployment
-   ```
 
 5. Open in de browser:
 
